@@ -7,17 +7,17 @@ import { calculateDistressScore } from '../utils/scoring';
 
 const TALUKS = ['Hassan', 'Alur', 'Sakleshpur', 'Arsikere', 'Belur', 'Channarayapatna', 'Holenarasipur', 'Arakalagudu'];
 
-const VoiceInput = ({ label, field, value, onChange, onResult, lang, type="text" }) => {
+const VoiceInput = ({ label, field, value, onChange, onResult, lang, type = "text" }) => {
   const { isListening, startListening } = useSpeech(onResult);
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <div className="relative flex items-center">
-        <input 
+        <input
           id={field} type={type} value={value} onChange={(e) => onChange(e.target.value)}
           className="w-full border-gray-300 rounded-md shadow-sm p-3 pr-12 border focus:ring-teal-primary focus:border-teal-primary"
         />
-        <button 
+        <button
           type="button" onClick={() => startListening(lang)}
           className={`absolute right-2 p-2 rounded-full ${isListening ? 'bg-system-red text-white animate-pulse' : 'text-gray-400 hover:text-teal-primary'}`}
         >
@@ -43,7 +43,7 @@ export default function FarmerOnboarding() {
   const handleVoiceInput = (field, result) => {
     const text = result.toLowerCase();
     console.log("Voice recognized:", text);
-    
+
     // Voice rules
     if (text.includes('ಬೆಳೆ ಹಾಳಾಯಿತು') || text.includes('crop failed') || text.includes('failed')) {
       setFormData(prev => ({ ...prev, cropOutcome: 'Failed' }));
@@ -67,13 +67,83 @@ export default function FarmerOnboarding() {
 
   const { isListening, startListening } = useSpeech();
 
-  const loadDemo = () => {
-    setFormData({
-      name: 'Ramesh Kumar', village: 'Alur HQ', taluk: 'Alur', aadhaar: '1234 5678 9012',
-      crop: 'Paddy', cropOutcome: 'Failed', landSize: '2.5',
-      loanDaysOverdue: 60, marketActivity: 'Inactive', scoreOffset: 8
-    });
-    setStep(3);
+  const loadDemo = async () => {
+    const demoData = {
+      name: 'Ramesh Kumar',
+      village: 'Alur HQ',
+      taluk: 'Alur',
+      aadhaar: '1234 5678 9012',
+      crop: 'Paddy',
+      cropOutcome: 'Failed',
+      landSize: '2.5',
+      loanDaysOverdue: 60,
+      marketActivity: 'Inactive',
+      selfCheckin: 'Bad',
+      scoreOffset: 0
+    };
+    setFormData(demoData);
+    setLoading(true);
+    
+    try {
+      const res = await fetch(
+        import.meta.env.VITE_API_URL + '/api/farmers',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(demoData)
+        }
+      );
+      const data = await res.json();
+      localStorage.setItem(
+        'krishimanas_farmer', 
+        JSON.stringify(data)
+      );
+    } catch(e) {
+      const score = 78;
+      const fallback = {
+        farmer: { ...demoData, id: 'f_demo', score },
+        score,
+        status: 'Red',
+        trajectory: 'Worsening',
+        schemes: [
+          {
+            id: 'sc1',
+            name: 'PM Fasal Bima Yojana',
+            benefit: '₹2 lakh crop insurance',
+            deadline: 'March 31 2026',
+            documents: ['Aadhaar', 'Land Records', 
+                        'Bank Passbook', 'Crop Loss Photo'],
+            eligibilityReason: 'Your crop failed this season',
+            eligibilityReasonKannada: 
+              'ನಿಮ್ಮ ಬೆಳೆ ಈ ಋತುವಿನಲ್ಲಿ ವಿಫಲವಾಗಿದೆ'
+          },
+          {
+            id: 'sc2',
+            name: 'Karnataka Raitha Siri',
+            benefit: '₹10,000 per hectare',
+            deadline: 'April 15 2026',
+            documents: ['Aadhaar', 'RTC', 
+                        'Bank Passbook'],
+            eligibilityReason: 
+              'Crop failure confirmed in Karnataka',
+            eligibilityReasonKannada: 
+              'ಕರ್ನಾಟಕದಲ್ಲಿ ಬೆಳೆ ನಷ್ಟ ದೃಢಪಟ್ಟಿದೆ'
+          }
+        ],
+        mitra: { 
+          name: 'Suresh Naik', 
+          village: 'Alur',
+          assigned: ['Alur'] 
+        }
+      };
+      localStorage.setItem(
+        'krishimanas_farmer', 
+        JSON.stringify(fallback)
+      );
+    }
+    
+    setLoading(false);
+    navigate('/farmer/dashboard');
   };
 
   const submitForm = async () => {
@@ -90,7 +160,7 @@ export default function FarmerOnboarding() {
     } catch (e) {
       console.warn("Backend unavailable, using local fallback");
       const score = calculateDistressScore(formData);
-      
+
       const mockSchemes = [
         { id: 'sc1', name: 'Raitha Siri', benefit: '₹10,000 / hectare', eligibilityReason: 'Crop failed and loan overdue', eligibilityReasonKannada: 'ಬೆಳೆ ವಿಫಲವಾಗಿದೆ ಮತ್ತು ಸಾಲ ಬಾಕಿ ಇದೆ', documents: ['Aadhaar', 'Bank Passbook'], deadline: '15 Days' },
         { id: 'sc2', name: 'Parihara', benefit: 'Immediate relief fund', eligibilityReason: 'High distress score in Alur taluk', eligibilityReasonKannada: 'ಆಲೂರು ತಾಲೂಕಿನಲ್ಲಿ ಹೆಚ್ಚಿನ ಸಂಕಷ್ಟ ಅಂಕ', documents: ['RTC / Pahani', 'Aadhaar'], deadline: '7 Days' }
@@ -134,20 +204,20 @@ export default function FarmerOnboarding() {
               <h2 className="text-2xl font-bold text-navy mb-6 flex items-center gap-2">
                 <User className="text-teal-primary" /> Personal Details
               </h2>
-              <VoiceInput label="Full Name" field="name" value={formData.name} onChange={v => setFormData({...formData, name: v})} onResult={res => handleVoiceInput('name', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+              <VoiceInput label="Full Name" field="name" value={formData.name} onChange={v => setFormData({ ...formData, name: v })} onResult={res => handleVoiceInput('name', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Taluk</label>
-                <select 
-                  value={formData.taluk} onChange={e => setFormData({...formData, taluk: e.target.value})}
+                <select
+                  value={formData.taluk} onChange={e => setFormData({ ...formData, taluk: e.target.value })}
                   className="w-full border-gray-300 rounded-md shadow-sm p-3 border focus:ring-teal-primary focus:border-teal-primary"
                 >
                   {TALUKS.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <VoiceInput label="Village Name" field="village" value={formData.village} onChange={v => setFormData({...formData, village: v})} onResult={res => handleVoiceInput('village', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
-              <VoiceInput label="Aadhaar ID" field="aadhaar" type="tel" value={formData.aadhaar} onChange={v => setFormData({...formData, aadhaar: v})} onResult={res => handleVoiceInput('aadhaar', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
-              
-              <button 
+              <VoiceInput label="Village Name" field="village" value={formData.village} onChange={v => setFormData({ ...formData, village: v })} onResult={res => handleVoiceInput('village', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+              <VoiceInput label="Aadhaar ID" field="aadhaar" type="tel" value={formData.aadhaar} onChange={v => setFormData({ ...formData, aadhaar: v })} onResult={res => handleVoiceInput('aadhaar', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+
+              <button
                 onClick={() => setStep(2)}
                 className="w-full mt-6 bg-teal-primary text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-teal-700 transition"
               >
@@ -161,16 +231,16 @@ export default function FarmerOnboarding() {
               <h2 className="text-2xl font-bold text-navy mb-6 flex items-center gap-2">
                 <Leaf className="text-system-green" /> Farm Details
               </h2>
-              <VoiceInput label="Crop Grown" field="crop" value={formData.crop} onChange={v => setFormData({...formData, crop: v})} onResult={res => handleVoiceInput('crop', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
-              <VoiceInput label="Land Size (Acres)" field="landSize" type="number" value={formData.landSize} onChange={v => setFormData({...formData, landSize: v})} onResult={res => handleVoiceInput('landSize', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
-              
+              <VoiceInput label="Crop Grown" field="crop" value={formData.crop} onChange={v => setFormData({ ...formData, crop: v })} onResult={res => handleVoiceInput('crop', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+              <VoiceInput label="Land Size (Acres)" field="landSize" type="number" value={formData.landSize} onChange={v => setFormData({ ...formData, landSize: v })} onResult={res => handleVoiceInput('landSize', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2 border-b pb-1">Last Season Outcome</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['Good', 'Partial', 'Failed'].map(opt => (
                     <button
                       key={opt}
-                      onClick={() => setFormData({...formData, cropOutcome: opt})}
+                      onClick={() => setFormData({ ...formData, cropOutcome: opt })}
                       className={`py-2 rounded-md font-medium text-sm border transition ${formData.cropOutcome === opt ? (opt === 'Failed' ? 'bg-system-red text-white border-system-red' : 'bg-teal-primary text-white border-teal-primary') : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                     >
                       {opt}
@@ -191,16 +261,16 @@ export default function FarmerOnboarding() {
               <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-2">
                 <CreditCard className="text-system-yellow" /> Financial Status
               </h2>
-              
-              <VoiceInput label="Loan Days Overdue" field="loanDaysOverdue" type="number" value={formData.loanDaysOverdue} onChange={v => setFormData({...formData, loanDaysOverdue: v})} onResult={res => handleVoiceInput('loanDaysOverdue', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
-              
+
+              <VoiceInput label="Loan Days Overdue" field="loanDaysOverdue" type="number" value={formData.loanDaysOverdue} onChange={v => setFormData({ ...formData, loanDaysOverdue: v })} onResult={res => handleVoiceInput('loanDaysOverdue', res)} lang={lang === 'kn' ? 'kn-IN' : 'en-IN'} />
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2 border-b pb-1">Market Activity</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['Active', 'Low', 'Inactive'].map(opt => (
                     <button
                       key={opt}
-                      onClick={() => setFormData({...formData, marketActivity: opt})}
+                      onClick={() => setFormData({ ...formData, marketActivity: opt })}
                       className={`py-2 rounded-md font-medium text-sm border transition ${formData.marketActivity === opt ? 'bg-navy text-white border-navy' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                     >
                       {opt}
@@ -222,7 +292,7 @@ export default function FarmerOnboarding() {
 
               <div className="flex gap-3 mt-8">
                 <button onClick={() => setStep(2)} className="w-1/3 py-3 rounded-lg font-bold border border-gray-300 text-gray-600 hover:bg-gray-50">Back</button>
-                <button 
+                <button
                   onClick={submitForm}
                   disabled={loading}
                   className="w-2/3 bg-system-red text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-red-700 shadow-lg shadow-red-200"
