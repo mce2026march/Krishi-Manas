@@ -1,9 +1,28 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc as fsDoc, 
+  setDoc as fsSetDoc, 
+  getDoc as fsGetDoc, 
+  collection as fsCollection, 
+  onSnapshot as fsOnSnapshot, 
+  query as fsQuery, 
+  addDoc as fsAddDoc, 
+  serverTimestamp as fsServerTimestamp, 
+  updateDoc as fsUpdateDoc,
+  orderBy as fsOrderBy,
+  limit as fsLimit,
+  where as fsWhere,
+  arrayUnion as fsArrayUnion
+} from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// (Replace with actual keys from Firebase Console later)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "demo-domain.firebaseapp.com",
@@ -13,67 +32,87 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:0000:web:0000"
 };
 
-// Initialize Firebase only if we have real keys, otherwise we will mock the exports to prevent crashes
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || "";
-// FORCE MOCK MODE: The connected Firebase project does not have Email/Password Auth enabled.
-const isConfigured = false; // apiKey.length > 5 && apiKey !== "dummy" && apiKey !== "demo-api-key";
+const isConfigured = apiKey.length > 5 && apiKey !== "demo-api-key" && apiKey !== "VITE_FIREBASE_API_KEY";
 
 let app, auth, db;
+
+// --- Mock Implementations ---
+const mockDb = { _isMock: true };
+const mockDoc = () => ({ _type: 'doc' });
+const mockCollection = () => ({ _type: 'collection' });
+const mockQuery = () => ({ _type: 'query' });
+const mockOnSnapshot = (q, cb) => { 
+  // Immediate empty snapshot to satisfy initialization
+  const mockSnap = {
+    docs: [],
+    empty: true,
+    forEach: (fn) => {},
+    metadata: { fromCache: true, hasPendingWrites: false }
+  };
+  const timer = setTimeout(() => cb(mockSnap), 0);
+  return () => clearTimeout(timer); 
+};
+const mockAddDoc = async () => ({ id: 'mock_' + Date.now() });
+const mockUpdateDoc = async () => {};
+const mockSetDoc = async () => {};
+const mockGetDoc = async () => ({ exists: () => false, data: () => ({}) });
+const mockServerTimestamp = () => new Date();
+const mockOrderBy = () => ({ _type: 'orderBy' });
+const mockLimit = () => ({ _type: 'limit' });
+const mockWhere = () => ({ _type: 'where' });
+const mockArrayUnion = (val) => [val];
 
 if (isConfigured) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
 } else {
-  console.warn("Firebase is not configured! Using mock fallback for UI development.");
-  // Mock implementations to keep the UI functional until Firebase is connected
+  console.warn("Firebase is not configured! Using high-fidelity mock fallback.");
   auth = {
     onAuthStateChanged: (cb) => { cb(null); return () => {}; },
     signInWithEmailAndPassword: async () => ({ user: { uid: 'mock_uid' } }),
     createUserWithEmailAndPassword: async () => ({ user: { uid: 'mock_uid' } }),
     signOut: async () => {}
   };
-  
-  db = {
-    doc: () => ({}),
-    setDoc: async () => {},
-    getDoc: async () => ({ exists: () => false, data: () => ({}) }),
-    collection: () => ({}),
-    onSnapshot: () => (() => {}),
-    query: () => ({}),
-    addDoc: async () => ({ id: 'mock_doc_id' }),
-    updateDoc: async () => {}
-  };
+  db = mockDb;
 }
 
-// Utility functions for our specific operations
+// --- Unified Exports ---
+export const doc = isConfigured ? fsDoc : mockDoc;
+export const setDoc = isConfigured ? fsSetDoc : mockSetDoc;
+export const getDoc = isConfigured ? fsGetDoc : mockGetDoc;
+export const collection = isConfigured ? fsCollection : mockCollection;
+export const onSnapshot = isConfigured ? fsOnSnapshot : mockOnSnapshot;
+export const query = isConfigured ? fsQuery : mockQuery;
+export const addDoc = isConfigured ? fsAddDoc : mockAddDoc;
+export const updateDoc = isConfigured ? fsUpdateDoc : mockUpdateDoc;
+export const serverTimestamp = isConfigured ? fsServerTimestamp : mockServerTimestamp;
+export const orderBy = isConfigured ? fsOrderBy : mockOrderBy;
+export const limit = isConfigured ? fsLimit : mockLimit;
+export const where = isConfigured ? fsWhere : mockWhere;
+export const arrayUnion = isConfigured ? fsArrayUnion : mockArrayUnion;
+
+// --- Business Logic Utilities ---
 export const fb = {
-  // --- Authentication ---
   registerUser: async (email, password, roleData) => {
-    if (!isConfigured) {
-      console.log("Mock Register:", email, roleData);
-      return { uid: email }; // Mock
-    }
+    if (!isConfigured) return { uid: 'mock_' + email };
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Create base user profile
-    await setDoc(doc(db, "users", user.uid), {
+    await fsSetDoc(fsDoc(db, "users", user.uid), {
       email,
-      roles: roleData.roles || ['farmer'], // 'farmer', 'mitra', 'admin'
+      roles: roleData.roles || ['farmer'],
       name: roleData.name || 'User',
       phone: roleData.phone || '',
       district: roleData.district || 'Hassan',
-      createdAt: serverTimestamp()
+      createdAt: fsServerTimestamp()
     });
-    
-    // Log global activity for Admin
     await fb.logActivity('USER_REGISTERED', `${roleData.name || 'A user'} registered as ${roleData.roles?.join(', ')}`);
     return user;
   },
 
   loginUser: async (email, password) => {
-    if (!isConfigured) return { uid: email };
+    if (!isConfigured) return { uid: 'mock_' + email };
     return await signInWithEmailAndPassword(auth, email, password);
   },
 
@@ -82,59 +121,16 @@ export const fb = {
     return await signOut(auth);
   },
 
-  // --- Real-time Sync Operations ---
-  updateFarmerScore: async (uid, newScore, checks = {}, sentiment = '') => {
-    if (!isConfigured) return;
-    
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      score: newScore,
-      lastCheckin: serverTimestamp()
-    });
-
-    // Log the checkin for the Admin Feed
-    const status = newScore >= 65 ? 'CRITICAL' : newScore >= 35 ? 'WARNING' : 'STABLE';
-    await fb.logActivity(`CHECKIN_${status}`, `Farmer updated score to ${newScore}. Sentiment: ${sentiment}`);
-  },
-
-  triggerSOS: async (farmerId, farmerName, location) => {
-    if (!isConfigured) return;
-    
-    // Add to active SOS collection
-    await addDoc(collection(db, "active_sos"), {
-      farmerId,
-      farmerName,
-      location,
-      status: 'pending', // pending, claimed, resolved
-      timestamp: serverTimestamp()
-    });
-
-    await fb.logActivity(`FARMER_SOS`, `🚨 SOS TRIGGERED by ${farmerName}`);
-  },
-
-  claimCase: async (sosId, mitraId, mitraName) => {
-    if (!isConfigured) return;
-    
-    const sosRef = doc(db, "active_sos", sosId);
-    await updateDoc(sosRef, {
-      status: 'claimed',
-      claimedBy: mitraId,
-      claimedByName: mitraName,
-      claimedAt: serverTimestamp()
-    });
-
-    await fb.logActivity(`CASE_CLAIMED`, `Mitra ${mitraName} claimed SOS case.`);
-  },
-
-  logActivity: async (type, message) => {
+  logActivity: async (type, message, extraData = {}) => {
     if (!isConfigured) {
-      console.log(`[SYS] ${type}: ${message}`);
+      console.log(`[SYS] ${type}: ${message}`, extraData);
       return;
     }
-    await addDoc(collection(db, "global_activities"), {
+    await fsAddDoc(fsCollection(db, "global_activities"), {
       type,
       message,
-      timestamp: serverTimestamp()
+      ...extraData,
+      timestamp: fsServerTimestamp()
     });
   }
 };

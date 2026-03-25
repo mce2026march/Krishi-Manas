@@ -36,33 +36,30 @@ export default function AuthModal({ isOpen, onClose, defaultRole = 'mitra' }) {
           name,
           phone,
           district,
-          roles: [defaultRole]
+          roles: [defaultRole],
+          mitraId: defaultRole === 'farmer' ? null : undefined
         });
       }
 
       // Ensure portal-specific storage is populated so they have separate, isolated info
+      // Audit Fix: We now check if the farmer has profile data to decide between Dashboard vs Onboarding
       if (defaultRole === 'farmer') {
-        localStorage.setItem('krishimanas_farmer', JSON.stringify({ 
-          name: finalUser.name || name || email.split('@')[0], 
-          email, 
-          district: finalUser.district || district, 
-          score: 55, 
-          crop: 'Coffee', // Hassan context
-          loanDaysOverdue: 20 
-        }));
+        // If it's a new registration, always go to onboarding
+        // If it's a login, check if they have already onboarded (fallback to dashboard)
+        if (!isLogin) {
+          navigate('/farmer/onboarding');
+        } else if (finalUser.hasOnboarded) {
+          navigate('/farmer/dashboard');
+        } else {
+          // If login but no profile found in session yet, check local storage as fallback
+          const hasOnboardedLocal = localStorage.getItem('krishimanas_farmer'); 
+          navigate(hasOnboardedLocal ? '/farmer/dashboard' : '/farmer/onboarding');
+        }
       } else if (defaultRole === 'admin') {
-        localStorage.setItem('krishimanas_admin', JSON.stringify({ 
-          name: finalUser.name || name || email.split('@')[0], 
-          email, 
-          district: finalUser.district || district 
-        }));
+        navigate('/admin');
+      } else if (defaultRole === 'mitra') {
+        navigate('/mitra');
       }
-
-      onClose();
-      // Redirect based on role
-      if (defaultRole === 'mitra') navigate('/mitra');
-      if (defaultRole === 'farmer') navigate('/farmer/dashboard');
-      if (defaultRole === 'admin') navigate('/admin');
     } catch (err) {
       console.error(err);
       setError(err.message || 'Authentication failed');

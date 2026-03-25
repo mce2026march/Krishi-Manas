@@ -9,69 +9,76 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'farmer', 'mitra', 'admin'
+  const [userRole, setUserRole] = useState(null); 
   const [loading, setLoading] = useState(true);
 
-  // Initialize from LocalStorage or Firebase State
   useEffect(() => {
-    // If Firebase isn't strictly configured with real keys, rely on localStorage simulation
-    const storedUser = localStorage.getItem('krishimanas_auth_user');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-      setUserRole(JSON.parse(storedUser).activeRole || 'farmer');
+    try {
+      const path = window.location.pathname;
+      let role = 'farmer';
+      if (path.startsWith('/admin')) {
+        role = 'admin';
+      } else if (path.startsWith('/mitra')) {
+        role = 'mitra';
+      }
+      
+      const storedUser = localStorage.getItem(`krishimanas_auth_${role}`);
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setCurrentUser(parsed);
+        setUserRole(role);
+      }
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
     }
-    // Instead of forcing real Firebase auth listeners that crash without API keys,
-    // we just complete loading.
-    setLoading(false);
   }, []);
 
-  // --- Registration / Login Simulators ---
   const registerUser = async (email, password, profileData) => {
+    const role = profileData.roles[0];
     const user = await fb.registerUser(email, password, profileData);
     const sessionData = {
       uid: user.uid,
       email,
       ...profileData,
-      activeRole: profileData.roles[0] 
+      activeRole: role 
     };
-    setCurrentUser(sessionData);
-    setUserRole(sessionData.activeRole);
-    localStorage.setItem('krishimanas_auth_user', JSON.stringify(sessionData));
     
-    // Broadcast for Admin realtime tracking
-    fb.logActivity('REGISTER', `${profileData.name} joined as ${profileData.roles[0]}`);
-    window.dispatchEvent(new CustomEvent('auth_event', { detail: { type: 'LOGIN', user: sessionData }}));
+    setCurrentUser(sessionData);
+    setUserRole(role);
+    localStorage.setItem(`krishimanas_auth_${role}`, JSON.stringify(sessionData));
+    
+    fb.logActivity('REGISTER', `${profileData.name} joined as ${role}`);
+    window.dispatchEvent(new CustomEvent('auth_event', { detail: { type: 'LOGIN', role, user: sessionData }}));
     
     return sessionData;
   };
 
   const loginUser = async (email, password, roleHint = 'farmer') => {
-    // This is a simulated login for now, assuming they pass auth
-    const user = await fb.loginUser(email, password); // Firebase real check (if config present)
+    const user = await fb.loginUser(email, password); 
     const sessionData = {
       uid: user.uid || email,
       email,
-      name: email.split('@')[0], // Mock name from email
-      roles: [roleHint], // In a real app, fetched from Firestore /users/{uid}
+      name: email.split('@')[0],
+      roles: [roleHint], 
       activeRole: roleHint
     };
     
     setCurrentUser(sessionData);
-    setUserRole(sessionData.activeRole);
-    localStorage.setItem('krishimanas_auth_user', JSON.stringify(sessionData));
-    window.dispatchEvent(new CustomEvent('auth_event', { detail: { type: 'LOGIN', user: sessionData }}));
+    setUserRole(roleHint);
+    localStorage.setItem(`krishimanas_auth_${roleHint}`, JSON.stringify(sessionData));
+    window.dispatchEvent(new CustomEvent('auth_event', { detail: { type: 'LOGIN', role: roleHint, user: sessionData }}));
     
     return sessionData;
   };
 
-  const logout = async () => {
+  const logout = async (role = userRole) => {
     await fb.logoutUser();
     setCurrentUser(null);
     setUserRole(null);
-    localStorage.removeItem('krishimanas_auth_user');
+    localStorage.removeItem(`krishimanas_auth_${role}`);
   };
 
-  // Farmer to Mitra Dual-Role Upgrade
   const upgradeToMitra = async () => {
     if (!currentUser) return;
     const updatedUser = { 
@@ -101,12 +108,13 @@ export function AuthProvider({ children }) {
     registerUser,
     logout,
     upgradeToMitra,
-    switchActiveRole
+    switchActiveRole,
+    loading
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

@@ -8,20 +8,23 @@ import FarmerCheckin from './pages/FarmerCheckin';
 import AdminDashboard from './pages/AdminDashboard';
 import MitraPortal from './pages/MitraPortal';
 import QRPage from './pages/QRPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
-        <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
-        <Route path="/farmer/checkin" element={<FarmerCheckin />} />
-        <Route path="/farmer" element={<FarmerOnboarding />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/mitra" element={<MitraPortal />} />
-        <Route path="/qr" element={<QRPage />} />
-      </Routes>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/farmer/onboarding" element={<FarmerOnboarding />} />
+          <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+          <Route path="/farmer/checkin" element={<FarmerCheckin />} />
+          <Route path="/farmer" element={<FarmerOnboarding />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/mitra" element={<MitraPortal />} />
+          <Route path="/qr" element={<QRPage />} />
+        </Routes>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
