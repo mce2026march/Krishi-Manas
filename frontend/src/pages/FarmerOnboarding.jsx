@@ -87,6 +87,7 @@ export default function FarmerOnboarding() {
         score,
         status,
         hasOnboarded: true,
+        roles: ['farmer'],
         assignedMitraId: null,
         lastUpdated: serverTimestamp()
       });

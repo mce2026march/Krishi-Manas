@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LanguageContext';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useAuth } from '../contexts/AuthContext';
-import { db, fb, doc, onSnapshot, updateDoc, serverTimestamp, collection, addDoc, query, where, orderBy, limit } from '../utils/firebase';
+import { db, fb, doc, onSnapshot, updateDoc, serverTimestamp, collection, addDoc, query, where, orderBy, limit, getDocs } from '../utils/firebase';
 import { 
   Volume2, AlertTriangle, CheckCircle, CloudRain, MapPin, Upload, User, 
   TrendingUp, TrendingDown, Minus, Home, FileText, PhoneCall, Loader2, X, Activity, Zap, Bell,
-  Clock, Menu, Phone, ArrowRight, Calculator, Binary
+  Clock, Menu, Phone, ArrowRight, Calculator, Binary, RefreshCcw
 } from 'lucide-react';
 import { getMockWeather } from '../utils/mockWeather';
 import { matchSchemes } from '../utils/matchSchemes'; 
@@ -225,6 +225,8 @@ export default function FarmerDashboard() {
   const [weather, setWeather] = useState(null);
   const [mitraAlert, setMitraAlert] = useState(null);
   const [isAlgoOpen, setIsAlgoOpen] = useState(false);
+  const [showRelinquishConfirm, setShowRelinquishConfirm] = useState(false);
+  const [isRelinquishing, setIsRelinquishing] = useState(false);
   const fileInputRefs = useRef({});
 
   // Audit Fix: Real-time Firestore Listener for Farmer Profile
@@ -249,18 +251,26 @@ export default function FarmerDashboard() {
     // 2. Listen for Incoming Alerts from Mitra
     const qAlerts = query(
       collection(db, 'global_activities'), 
-      where('targetId', '==', currentUser.uid),
-      where('type', '==', 'PRIORITY_ALERT'),
-      orderBy('timestamp', 'desc'),
-      limit(1)
+      where('targetId', '==', currentUser.uid)
     );
     const unsubAlerts = onSnapshot(qAlerts, (snap) => {
       if (!snap.empty) {
-        const lastAlert = snap.docs[0].data();
-        // Show if within last 60 seconds
-        const ts = lastAlert.timestamp?.toMillis?.() || lastAlert.timestamp;
-        if (Date.now() - ts < 60000) {
-          setMitraAlert({ ...lastAlert, id: snap.docs[0].id });
+        // Index-Free Filter & Sort
+        const filtered = snap.docs
+          .filter(d => d.data().type === 'PRIORITY_ALERT')
+          .sort((a,b) => {
+            const tA = a.data().timestamp?.toMillis?.() || a.data().timestamp || 0;
+            const tB = b.data().timestamp?.toMillis?.() || b.data().timestamp || 0;
+            return tB - tA;
+          });
+
+        if (filtered.length > 0) {
+          const lastAlert = filtered[0].data();
+          // Show if within last 60 seconds
+          const ts = lastAlert.timestamp?.toMillis?.() || lastAlert.timestamp;
+          if (Date.now() - ts < 60000) {
+            setMitraAlert({ ...lastAlert, id: filtered[0].id });
+          }
         }
       }
     }, (err) => {
@@ -337,7 +347,7 @@ export default function FarmerDashboard() {
 
       // 1.7 Update Farmer's user doc so Mitra queue auto-routes them
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        lastSos: Date.now()
+        lastSos: serverTimestamp()
       });
 
       // 2. Local Fallback for legacy listeners
@@ -365,6 +375,49 @@ export default function FarmerDashboard() {
     setTimeout(() => {
       setUploadStatus(prev => ({ ...prev, [key]: 'done' }));
     }, 1500);
+  };
+  
+  const handleRelinquishMitra = async () => {
+    setIsRelinquishing(true);
+    try {
+      // 1. Reset Farmer Doc
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        assignedMitraId: null,
+        assignedMitraName: null,
+        assignedMitraPhone: null,
+        status: 'Awaiting',
+        lastMitraRelinquished: serverTimestamp()
+      });
+
+      // 2. Unclaim Global Alert
+      // We look for any alert for this farmer that is currently claimed
+      const qAlerts = query(
+        collection(db, 'alerts'),
+        where('farmerId', '==', currentUser.uid)
+      );
+      const snap = await getDocs(qAlerts);
+      
+      const updatePromises = snap.docs
+        .filter(d => d.data().isClaimed === true)
+        .map(d => updateDoc(d.ref, {
+        isClaimed: false,
+        claimedBy: null,
+        relinquishedAt: serverTimestamp()
+      }));
+      await Promise.all(updatePromises);
+
+      // 3. Log Activity
+      await fb.logActivity('MITRA_RELINQUISHED', `${farmerData.name} requested Mitra reassignment. Case is now back in queue.`, {
+        farmerId: currentUser.uid,
+        previousMitraId: farmerData.assignedMitraId
+      });
+
+      setShowRelinquishConfirm(false);
+    } catch (e) {
+      console.error("Relinquish Error", e);
+    } finally {
+      setIsRelinquishing(false);
+    }
   };
 
   return (
@@ -572,6 +625,16 @@ export default function FarmerDashboard() {
                     </div>
                  </div>
 
+                 {farmerData.assignedMitraId && (
+                   <button 
+                     onClick={() => setShowRelinquishConfirm(true)}
+                     className="mb-8 w-full py-4 rounded-2xl border border-white/5 bg-white/5 flex items-center justify-center gap-3 text-[10px] font-black uppercase text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group/btn"
+                   >
+                      <RefreshCcw size={14} className="group-hover/btn:rotate-180 transition-transform duration-700" />
+                      Switch Mitra Unit
+                   </button>
+                 )}
+
                  <button 
                   onClick={handleSOS}
                   disabled={sosStatus !== 'idle'}
@@ -752,6 +815,41 @@ export default function FarmerDashboard() {
                        </span>
                     </div>
                  </div>
+              </div>
+           </div>
+        </div>
+      )}
+      
+      {/* ─── Relinquish Confirm Modal ─── */}
+      {showRelinquishConfirm && (
+        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div 
+             onClick={() => !isRelinquishing && setShowRelinquishConfirm(false)} 
+             className="absolute inset-0 bg-[#020617]/95 backdrop-blur-3xl" 
+           />
+           <div className="relative w-full max-w-md bg-[#0f172a] border border-white/5 rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden p-10 text-center">
+              <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mx-auto mb-8 border border-red-500/20">
+                 <RefreshCcw size={32} />
+              </div>
+              <h3 className="text-3xl font-black text-white tracking-tighter mb-4 uppercase italic">Switch Mitra?</h3>
+              <p className="text-slate-400 font-bold text-sm mb-10 leading-relaxed italic opacity-80">
+                 Your current Mitra assignment will be cancelled. Your case will be re-listed in the priority queue for other regional units to claim.
+              </p>
+              <div className="flex flex-col gap-4">
+                 <button 
+                   onClick={handleRelinquishMitra}
+                   disabled={isRelinquishing}
+                   className="w-full py-6 bg-red-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-red-500 active:scale-95 transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-3"
+                 >
+                    {isRelinquishing ? <Loader2 className="animate-spin" size={18} /> : 'Confirm Relinquish'}
+                 </button>
+                 <button 
+                   onClick={() => setShowRelinquishConfirm(false)}
+                   disabled={isRelinquishing}
+                   className="w-full py-6 bg-white/5 text-slate-400 rounded-3xl font-black text-xs uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all"
+                 >
+                    Cancel Action
+                 </button>
               </div>
            </div>
         </div>

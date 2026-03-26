@@ -62,6 +62,7 @@ export default function MitraPortal() {
   const [noteInput, setNoteInput] = useState({});
   const [sosSignal, setSosSignal] = useState(null);
   const [selectedFarmer, setSelectedFarmer] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
 
   // Audit Fix: Re-injecting Firestore Listeners
   useEffect(() => {
@@ -76,35 +77,55 @@ export default function MitraPortal() {
     }, (err) => console.error("My Assigned Cases Index Error:", err));
 
     // 2. Listen for "Open Market" (New Registrations)
-    const qOpen = query(collection(db, 'users'), where('roles', 'array-contains', 'farmer'), where('assignedMitraId', '==', null));
+    const qOpen = query(collection(db, 'users'), where('assignedMitraId', '==', null));
     const unsubOpen = onSnapshot(qOpen, (snap) => {
       const list = [];
-      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      snap.forEach(doc => {
+        const data = doc.data();
+        // Client-side role filtering to avoid composite index requirement
+        if (data.roles?.includes('farmer')) {
+          list.push({ id: doc.id, ...data });
+        }
+      });
       setOpenMarket(list);
     }, (err) => console.error("Open Market Index Error:", err));
 
     // 3. Listen for SOS Signals
     const qSos = query(
       collection(db, 'alerts'), 
-      where('type', '==', 'SOS'), 
-      where('isClaimed', '==', false),
-      orderBy('timestamp', 'desc'), 
-      limit(1)
+      where('isClaimed', '==', false)
     );
     const unsubSos = onSnapshot(qSos, (snap) => {
       if (!snap.empty) {
-        const lastSos = snap.docs[0].data();
-        // Audit Fix: Proper timestamp convergence for real-time overlay
+        // 1. Manually Filter for SOS type (Index-Free Strategy)
+        const sosDocs = snap.docs.filter(d => d.data().type === 'SOS');
+        if (sosDocs.length === 0) {
+          setSosSignal(null);
+          return;
+        }
+
+        // 2. Sort client-side to find the most recent unclaimed SOS
+        const sortedDocs = [...sosDocs].sort((a,b) => {
+          const tA = a.data().timestamp?.toMillis?.() || a.data().timestamp || 0;
+          const tB = b.data().timestamp?.toMillis?.() || b.data().timestamp || 0;
+          return tB - tA;
+        });
+
+        const lastSosDoc = sortedDocs[0];
+        const lastSos = lastSosDoc.data();
+        
+        // Audit Fix: ID-based trigger bypassing chronological sturdiness issues
         const ts = lastSos.timestamp?.toMillis?.() || lastSos.timestamp || Date.now();
-        if (Date.now() - ts < 60000) { // Only show if recent (60s)
-          setSosSignal({ ...lastSos, id: snap.docs[0].id });
+        const isRecent = (Date.now() - ts) < 300000; // 5 minute buffer
+        
+        if (isRecent && !dismissedAlerts.has(lastSosDoc.id)) {
+          setSosSignal({ ...lastSos, id: lastSosDoc.id });
         }
       } else {
         setSosSignal(null);
       }
     }, (err) => {
-      console.error("CRITICAL: SOS Feed Index Required.", err);
-      console.warn("If you see a Firebase Index Error above, please click the generated link in the console to create it.");
+      console.error("SOS Feed Error:", err);
     });
 
     return () => {
@@ -221,7 +242,12 @@ export default function MitraPortal() {
   const resolvedCases = myCases.filter(c => isResolved(c));
 
   const getZone = (score) => score >= 65 ? 'red' : (score >= 35 ? 'yellow' : 'green');
-  const isRecentSOS = (c) => c.lastSos && (Date.now() - c.lastSos < 24 * 60 * 60 * 1000);
+  const isRecentSOS = (c) => {
+    if (!c.lastSos) return false;
+    // Audit Fix: Handle Firestore Timestamp OR Milliseconds
+    const ts = c.lastSos?.toMillis?.() || c.lastSos;
+    return (Date.now() - ts < 24 * 60 * 60 * 1000);
+  };
 
   const urgentUnassigned = openMarket.filter(c => isRecentSOS(c));
 
@@ -538,7 +564,13 @@ export default function MitraPortal() {
                     >
                        Intercept Case
                     </button>
-                    <button onClick={() => setSosSignal(null)} className="p-3 bg-red-700/50 rounded-2xl hover:bg-red-700 transition-all">
+                    <button 
+                      onClick={() => {
+                        setDismissedAlerts(prev => new Set(prev).add(sosSignal.id));
+                        setSosSignal(null);
+                      }} 
+                      className="p-3 bg-red-700/50 rounded-2xl hover:bg-red-700 transition-all"
+                    >
                        <X size={20} />
                     </button>
                  </div>

@@ -17,6 +17,7 @@ import {
   addDoc as fsAddDoc, 
   serverTimestamp as fsServerTimestamp, 
   updateDoc as fsUpdateDoc,
+  getDocs as fsGetDocs,
   orderBy as fsOrderBy,
   limit as fsLimit,
   where as fsWhere,
@@ -90,6 +91,7 @@ if (isConfigured) {
 export const doc = isConfigured ? fsDoc : mockDoc;
 export const setDoc = isConfigured ? fsSetDoc : mockSetDoc;
 export const getDoc = isConfigured ? fsGetDoc : mockGetDoc;
+export const getDocs = isConfigured ? fsGetDocs : async () => ({ docs: [], empty: true });
 export const collection = isConfigured ? fsCollection : mockCollection;
 export const onSnapshot = isConfigured ? fsOnSnapshot : mockOnSnapshot;
 export const query = isConfigured ? fsQuery : mockQuery;
