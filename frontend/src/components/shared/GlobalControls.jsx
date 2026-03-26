@@ -49,7 +49,7 @@ const GlobalControls = () => {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-[5000] flex flex-col items-center gap-3">
+    <div className="fixed top-8 right-8 z-[5000] flex flex-col items-center gap-3">
       {/* Read Aloud Button */}
       <button
         onClick={handleReadAloud}
