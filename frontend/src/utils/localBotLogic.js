@@ -43,7 +43,8 @@ export const getLocalResponse = (query, userData) => {
   }
 
   // --- 4. SHARED LOGIC ---
-  if (q.includes('hi') || q.includes('hello') || q.includes('namaste')) {
+  // Only trigger local greeting if it's a short, simple opener (less than 15 chars)
+  if ((q.includes('hi') || q.includes('hello') || q.includes('namaste')) && q.length < 15) {
     return `Namaste ${userData.name || 'friend'}! I am here to help you navigate the KrishiManas system as a ${role}. What's on your mind?`;
   }
 
