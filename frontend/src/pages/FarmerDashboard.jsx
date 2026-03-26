@@ -294,10 +294,10 @@ export default function FarmerDashboard() {
   const score = farmerData?.score ?? 0;
   const status = score >= 65 ? 'Red' : score >= 35 ? 'Yellow' : 'Green';
   const trajectory = farmerData?.trajectory || 'Stable';
-  const lastCheckin = farmerData?.lastUpdated; // Firestore timestamp
+  const lastCheckin = farmerData?.lastCheckinDate; // Explicit assessment timestamp
 
   const COOLDOWN_PERIOD = 14 * 24 * 60 * 60 * 1000;
-  const lastCheckinMs = lastCheckin?.seconds ? lastCheckin.seconds * 1000 : (lastCheckin?.toMillis?.() || Date.now());
+  const lastCheckinMs = lastCheckin?.seconds ? lastCheckin.seconds * 1000 : (lastCheckin?.toMillis?.() || 0);
   const canCheckIn = !lastCheckin || (Date.now() - lastCheckinMs) > COOLDOWN_PERIOD;
 
   const { schemes, aiSummary } = matchSchemes({
@@ -522,15 +522,17 @@ export default function FarmerDashboard() {
                  <div className="relative z-10 flex items-center justify-between">
                     <div>
                        <div className={`text-[10px] font-black uppercase tracking-[0.3em] mb-2 ${canCheckIn ? 'text-[#020617]' : 'text-teal-500'}`}>
-                          {canCheckIn ? (lang === 'en' ? 'Action Required' : 'ಕ್ರಮದ ಅಗತ್ಯವಿದೆ') : (lang === 'en' ? 'Assessment Nominal' : 'ಪರಿಶೀಲನೆ ಸಾಮಾನ್ಯ')}
+                          {canCheckIn ? (lang === 'en' ? 'Diagnostic Required' : 'ರೋಗನಿರ್ಣಯ ಅಗತ್ಯವಿದೆ') : (lang === 'en' ? 'Protocol Locked' : 'ಪ್ರೋಟೋಕಾಲ್ ಲಾಕ್ ಆಗಿದೆ')}
                        </div>
                        <h3 className={`text-3xl font-black tracking-tighter ${canCheckIn ? 'text-[#020617]' : 'text-white'}`}>
-                          {lang === 'kn' ? 'ಸಂಕಷ್ಟದ ಪರಿಶೀಲನೆ-೨' : 'Dynamic DPI Audit'}
+                          {lang === 'kn' ? 'ಸಂಕಷ್ಟದ ರೋಗನಿರ್ಣಯ' : 'Socio-Economic Audit'}
                        </h3>
                        <p className={`text-sm font-bold max-w-sm mt-2 ${canCheckIn ? 'text-[#020617]/70 italic' : 'text-slate-500'}`}>
                           {canCheckIn 
-                            ? (lang === 'en' ? 'Your evaluation window is open. Recalibrate your distress index for priority scheme access.' : 'ನಿಮ್ಮ ಮೌಲ್ಯಮಾಪನ ವಿಂಡೋ ತೆರೆದಿದೆ. ಯೋಜನೆಗಳಿಗಾಗಿ ನಿಮ್ಮ ಸಂಕಷ್ಟ ಸೂಚ್ಯಂಕವನ್ನು ಮರು-ಮಾಪನ ಮಾಡಿ.') 
-                            : (lang === 'en' ? 'Score locked. Regional HQ is processing your current risk profile.' : 'ಸ್ಕೋರ್ ಲಾಕ್ ಆಗಿದೆ. ಪ್ರಾದೇಶಿಕ ಕೇಂದ್ರವು ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಅಪಾಯದ ಪ್ರೊಫೈಲ್ ಅನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುತ್ತಿದೆ.')}
+                            ? (lang === 'en' ? 'Evaluation window active. Perform 14-day resilience recalibration.' : 'ಮೌಲ್ಯಮಾಪನ ವಿಂಡೋ ಸಕ್ರಿಯವಾಗಿದೆ. 14-ದಿನಗಳ ಸ್ಥಿತಿಸ್ಥಾಪಕತ್ವ ಮರು-ಮಾಪನವನ್ನು ನಿರ್ವಹಿಸಿ.') 
+                            : (lang === 'en' 
+                                ? `Next diagnostic available in ${Math.ceil((COOLDOWN_PERIOD - (Date.now() - lastCheckinMs)) / (24 * 60 * 60 * 1000))} days.` 
+                                : `ಮುಂದಿನ ಪರಿಶೀಲನೆ ${Math.ceil((COOLDOWN_PERIOD - (Date.now() - lastCheckinMs)) / (24 * 60 * 60 * 1000))} ದಿನಗಳಲ್ಲಿ ಲಭ್ಯವಿದೆ.`)}
                        </p>
                     </div>
                     <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner transition-all duration-500 group-hover:scale-110 ${canCheckIn ? 'bg-[#020617] text-teal-400' : 'bg-white/5 text-slate-600'}`}>

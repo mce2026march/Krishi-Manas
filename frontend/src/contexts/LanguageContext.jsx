@@ -66,7 +66,21 @@ export const translations = {
     audio_guide_mitra: "Welcome to the Mitra Response active queue. Here you can monitor assigned cases, intercept incoming emergency S.O.S. signals, and document post-visit notes for the farmers in your sector. Keep an eye on the red alerts for immediate action.",
     audio_guide_admin: "Welcome to the Admin Intel Command Center. This dashboard provides real-time regional telemetry and spatial distress mapping. You can monitor active interventions across all sectors and deploy systemic alerts when an agricultural crisis is detected.",
     audio_guide_qr: "Welcome to the Master Q.R. Hub. This portal provides dynamic, printable intervention assets for rural distribution.",
-    audio_guide_default: "You are currently navigating the KrishiManas system."
+    audio_guide_default: "You are currently navigating the KrishiManas system.",
+    
+    // PROFESSIONAL ASSESSMENT KEYS
+    auditTitle: "Socio-Economic Resilience Diagnostic",
+    auditSub: "Official Regional Protocol // 14-Day Cycle",
+    catFinancial: "Financial & Debt Analytics",
+    catSocial: "Social & Community Support",
+    catPsych: "Psychological & Emotional Health",
+    catRisk: "Agricultural Risk Metrics",
+    q_debt_notice: "Received any formal or informal debt recovery notices?",
+    q_expense_stress: "Difficulty managing daily household expenses due to losses?",
+    q_isolation: "Feeling isolated or lack of support from local bodies?",
+    q_future_anxiety: "Persistent anxiety regarding your future in agriculture?",
+    q_crop_uninsured: "Significant pest or weather damage not covered by insurance?",
+    submitAudit: "Execute Diagnostic Submission"
   },
   kn: {
     heroTitle: "ಪ್ರತಿಯೊಂದು ಅಗ್ರಿ-ಟೆಕ್ ಸ್ಟಾರ್ಟಪ್ ರೈತರಿಗೆ ಹೆಚ್ಚು ಬೆಳೆಯಲು ಸಹಾಯ ಮಾಡುತ್ತಿದೆ.\nಕೃಷಿಮನಸ್ ಅವರು ಮತ್ತೆ ಬೆಳೆಯುವಷ್ಟು ಕಾಲ ಬದುಕಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ.",
@@ -131,7 +145,21 @@ export const translations = {
     audio_guide_mitra: "ಮಿತ್ರ ಸ್ಪಂದನ ಸಕ್ರಿಯ ಸರತಿಗೆ ಸುಸ್ವಾಗತ. ಇಲ್ಲಿ ನೀವು ನಿಯೋಜಿತ ಪ್ರಕರಣಗಳನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಬಹುದು, ಒಳಬರುವ ತುರ್ತು ಸಂಕೇತಗಳನ್ನು ಸ್ವೀಕರಿಸಬಹುದು, ಮತ್ತು ನಿಮ್ಮ ಸೆಕ್ಟರ್‌ನಲ್ಲಿರುವ ರೈತರಿಗಾಗಿ ಭೇಟಿಯ ನಂತರದ ಟಿಪ್ಪಣಿಗಳನ್ನು ದಾಖಲಿಸಬಹುದು. ತಕ್ಷಣದ ಕ್ರಮಕ್ಕಾಗಿ ಕೆಂಪು ಎಚ್ಚರಿಕೆಗಳ ಬಗ್ಗೆ ಗಮನವಿರಲಿ.",
     audio_guide_admin: "ಆಡಳಿತ ಮಾಹಿತಿ ಕಮಾಂಡ್ ಕೇಂದ್ರಕ್ಕೆ ಸುಸ್ವಾಗತ. ಈ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನೈಜ-ಸಮಯದ ಪ್ರಾದೇಶಿಕ ಟೆಲಿಮೆಟ್ರಿ ಮತ್ತು ಪ್ರಾದೇಶಿಕ ಸಂಕಷ್ಟ ಮ್ಯಾಪಿಂಗ್ ಅನ್ನು ಒದಗಿಸುತ್ತದೆ. ನೀವು ಎಲ್ಲಾ ವಲಯಗಳಾದ್ಯಂತ ಸಕ್ರಿಯ ಮಧ್ಯಸ್ಥಿಕೆಗಳನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಬಹುದು ಮತ್ತು ಕೃಷಿ ಬಿಕ್ಕಟ್ಟು ಪತ್ತೆಯಾದಾಗ ವ್ಯವಸ್ಥಿತ ಎಚ್ಚರಿಕೆಗಳನ್ನು ನಿಯೋಜಿಸಬಹುದು.",
     audio_guide_qr: "ಮಾಸ್ಟರ್ ಕ್ಯೂ.ಆರ್. ತಾಣಕ್ಕೆ ಸುಸ್ವಾಗತ. ಈ ಪೋರ್ಟಲ್ ಗ್ರಾಮೀಣ ವಿತರಣೆಗಾಗಿ ಮುದ್ರಿಸಬಹುದಾದ ಮದ್ಯಸ್ಥಿಕೆ ಸ್ವತ್ತುಗಳನ್ನು ಒದಗಿಸುತ್ತದೆ.",
-    audio_guide_default: "ನೀವು ಕೃಷಿಮನಸ್ ವ್ಯವಸ್ಥೆಯನ್ನು ಬಳಸುತ್ತಿದ್ದೀರಿ."
+    audio_guide_default: "ನೀವು ಕೃಷಿಮನಸ್ ವ್ಯವಸ್ಥೆಯನ್ನು ಬಳಸುತ್ತೀರಾ.",
+    
+    // PROFESSIONAL ASSESSMENT KEYS
+    auditTitle: "ಸಾಮಾಜಿಕ-ಆರ್ಥಿಕ ಸ್ಥಿತಿಸ್ಥಾಪಕತ್ವ ರೋಗನಿರ್ಣಯ",
+    auditSub: "ಅಧಿಕೃತ ಪ್ರಾದೇಶಿಕ ಪ್ರೋಟೋಕಾಲ್ // 14-ದಿನಗಳ ಚಕ್ರ",
+    catFinancial: "ಹಣಕಾಸು ಮತ್ತು ಸಾಲದ ವಿಶ್ಲೇಷಣೆ",
+    catSocial: "ಸಾಮಾಜಿಕ ಮತ್ತು ಸಮುದಾಯದ ಬೆಂಬಲ",
+    catPsych: "ಮಾನಸಿಕ ಮತ್ತು ಭಾವನಾತ್ಮಕ ಆರೋಗ್ಯ",
+    catRisk: "ಕೃಷಿ ಅಪಾಯದ ಮೆಟ್ರಿಕ್‌ಗಳು",
+    q_debt_notice: "ಯಾವುದೇ ಔಪಚಾರಿಕ ಅಥವಾ ಅನೌಪಚಾರಿಕ ಸಾಲ ವಸೂಲಾತಿ ನೋಟಿಸ್‌ಗಳನ್ನು ಸ್ವೀಕರಿಸಿದ್ದೀರಾ?",
+    q_expense_stress: "ನಷ್ಟದಿಂದಾಗಿ ದೈನಂದಿನ ಗೃಹ ವೆಚ್ಚಗಳನ್ನು ನಿಭಾಯಿಸಲು ಕಷ್ಟವಾಗುತ್ತಿದೆಯೇ?",
+    q_isolation: "ಸ್ಥಳೀಯ ಸಂಸ್ಥೆಗಳಿಂದ ಪ್ರತ್ಯೇಕತೆ ಅಥವಾ ಬೆಂಬಲದ ಕೊರತೆಯನ್ನು ಅನುಭವಿಸುತ್ತಿದ್ದೀರಾ?",
+    q_future_anxiety: "ಕೃಷಿಯಲ್ಲಿನ ನಿಮ್ಮ ಭವಿಷ್ಯದ ಬಗ್ಗೆ ನಿರಂತರ ಆತಂಕವಿದೆಯೇ?",
+    q_crop_uninsured: "ವಿಮೆಯ ವ್ಯಾಪ್ತಿಗೆ ಬರದ ಗಮನಾರ್ಹ ಕೀಟ ಅಥವಾ ಹವಾಮಾನ ಹಾನಿ ಉಂಟಾಗಿದೆಯೇ?",
+    submitAudit: "ರೋಗನಿರ್ಣಯ ಸಲ್ಲಿಕೆಯನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಿ"
   }
 };
 

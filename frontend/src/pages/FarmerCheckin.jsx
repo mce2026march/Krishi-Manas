@@ -11,38 +11,57 @@ import VoiceInput from '../components/shared/VoiceInput';
 const SENTIMENTS = [
   {
     key: 'good',
-    emoji: '😊',
-    labelEn: 'Optimal // Doing well',
-    labelKn: 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ',
-    color: 'border-white/5 bg-white/5',
-    activeColor: 'border-teal-500 bg-teal-500 text-[#020617]',
+    emoji: '🟢',
+    labelEn: 'Optimal // Resilient',
+    labelKn: 'ಸ್ಥಿತಿಸ್ಥಾಪಕತ್ವ // ಉತ್ತಮವಾಗಿದೆ',
+    color: 'border-emerald-500/10 bg-emerald-500/5',
+    activeColor: 'border-emerald-500 bg-emerald-500 text-[#020617]',
     scoreEffect: -5,
   },
   {
     key: 'okay',
-    emoji: '😐',
-    labelEn: 'Nominal // Concerned',
-    labelKn: 'ನಿಭಾಯಿಸುತ್ತಿದ್ದೇನೆ, ಆದರೆ ಚಿಂತೆ ಇದೆ',
-    color: 'border-white/5 bg-white/5',
+    emoji: '🟡',
+    labelEn: 'Nominal // Under Strain',
+    labelKn: 'ಸಾಮಾನ್ಯ // ಒತ್ತಡದಲ್ಲಿದೆ',
+    color: 'border-yellow-500/10 bg-yellow-500/5',
     activeColor: 'border-yellow-500 bg-yellow-500 text-[#020617]',
     scoreEffect: 5,
   },
   {
     key: 'bad',
-    emoji: '😟',
-    labelEn: 'Critical // Struggling',
-    labelKn: 'ತುಂಬಾ ಕಷ್ಟ ಆಗ್ತಿದೆ',
-    color: 'border-white/5 bg-white/5',
+    emoji: '🔴',
+    labelEn: 'Critical // High Vulnerability',
+    labelKn: 'ನಿರ್ಣಾಯಕ // ಹೆಚ್ಚಿನ ದುರ್ಬಲತೆ',
+    color: 'border-red-500/10 bg-red-500/5',
     activeColor: 'border-red-500 bg-red-500 text-white',
     scoreEffect: 15,
   },
 ];
 
-const QUICK_CHECKS = [
-  { id: 'loan', labelEn: 'Received a loan notice', labelKn: 'ಸಾಲದ ನೋಟಿಸ್ ಬಂತು', weight: 10 },
-  { id: 'crop', labelEn: 'New pest/crop anomaly', labelKn: 'ಬೆಳೆಗೆ ಹೊಸ ಸಮಸ್ಯೆ', weight: 12 },
-  { id: 'weather', labelEn: 'Adverse weather impact', labelKn: 'ಅಸಾಮಾನ್ಯ ಹವಾಮಾನ ಪ್ರಭಾವ', weight: 8 },
-  { id: 'family', labelEn: 'Family health disruption', labelKn: 'ಕುಟುಂಬ ಆರೋಗ್ಯ ಸಮಸ್ಯೆ', weight: 6 },
+const ASSESSMENT_CATEGORIES = [
+  {
+    id: 'financial',
+    labelKey: 'catFinancial',
+    questions: [
+      { id: 'q_debt_notice', labelKey: 'q_debt_notice', weight: 15 },
+      { id: 'q_expense_stress', labelKey: 'q_expense_stress', weight: 10 }
+    ]
+  },
+  {
+    id: 'social_psych',
+    labelKey: 'catPsych',
+    questions: [
+      { id: 'q_isolation', labelKey: 'q_isolation', weight: 8 },
+      { id: 'q_future_anxiety', labelKey: 'q_future_anxiety', weight: 12 }
+    ]
+  },
+  {
+    id: 'agri_risk',
+    labelKey: 'catRisk',
+    questions: [
+      { id: 'q_crop_uninsured', labelKey: 'q_crop_uninsured', weight: 15 }
+    ]
+  }
 ];
 
 export default function FarmerCheckin() {
@@ -70,7 +89,14 @@ export default function FarmerCheckin() {
   const calcScoreChange = () => {
     if (!sentiment) return 0;
     const base = SENTIMENTS.find(s => s.key === sentiment)?.scoreEffect || 0;
-    const checkScore = QUICK_CHECKS.reduce((sum, c) => sum + (checks[c.id] ? c.weight : 0), 0);
+    
+    let checkScore = 0;
+    ASSESSMENT_CATEGORIES.forEach(cat => {
+      cat.questions.forEach(q => {
+        if (checks[q.id]) checkScore += q.weight;
+      });
+    });
+    
     return base + checkScore;
   };
 
@@ -100,6 +126,7 @@ export default function FarmerCheckin() {
         status,
         trajectory: newTrajectory,
         lastUpdated: serverTimestamp(),
+        lastCheckinDate: serverTimestamp(), // Explicit checkin tracking
         checkins: arrayUnion(checkinRecord)
       });
 
@@ -218,25 +245,33 @@ export default function FarmerCheckin() {
              ))}
            </div>
 
-           {/* Event Log Configuration */}
-           <div className="space-y-6 pt-6 border-t border-white/5">
-             <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Recent Anomaly Detection</div>
-             <div className="grid gap-3">
-               {QUICK_CHECKS.map(c => (
-                 <button 
-                  key={c.id} 
-                  onClick={() => toggleCheck(c.id)}
-                  className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${
-                   checks[c.id] ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-white/5 border-white/5 text-slate-500 hover:border-white/10'
-                  }`}
-                 >
-                   <span className="text-[11px] font-black uppercase tracking-widest">{lang === 'kn' ? c.labelKn : c.labelEn}</span>
-                   <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${checks[c.id] ? 'bg-red-500 border-red-500' : 'border-white/10'}`}>
-                      {checks[c.id] && <CheckCircle size={12} className="text-white" />}
-                   </div>
-                 </button>
-               ))}
-             </div>
+           {/* Event Log Configuration - Professional Multi-Category */}
+           <div className="space-y-10 pt-6 border-t border-white/5">
+             {ASSESSMENT_CATEGORIES.map(cat => (
+               <div key={cat.id} className="space-y-4">
+                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] pl-1">
+                   {t(cat.labelKey)}
+                 </div>
+                 <div className="grid gap-3">
+                   {cat.questions.map(q => (
+                     <button 
+                      key={q.id} 
+                      onClick={() => toggleCheck(q.id)}
+                      className={`flex items-center justify-between p-5 rounded-2xl border transition-all text-left ${
+                       checks[q.id] ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-white/5 border-white/5 text-slate-400 hover:border-white/10'
+                      }`}
+                     >
+                       <span className="text-[11px] font-black uppercase tracking-widest flex-1 leading-relaxed">
+                         {t(q.labelKey)}
+                       </span>
+                       <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 ml-4 ${checks[q.id] ? 'bg-red-500 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'border-white/10'}`}>
+                          {checks[q.id] && <CheckCircle size={14} className="text-white" />}
+                       </div>
+                     </button>
+                   ))}
+                 </div>
+               </div>
+             ))}
            </div>
 
             <VoiceInput
@@ -263,8 +298,7 @@ export default function FarmerCheckin() {
              </div>
            )}
 
-           {/* Action Execution */}
-           <button
+            <button
              onClick={handleSubmit}
              disabled={!sentiment || loading}
              className={`w-full py-6 rounded-3xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-2xl ${
@@ -275,7 +309,7 @@ export default function FarmerCheckin() {
            >
              {loading
                ? <Loader2 className="animate-spin" size={24} />
-               : (lang === 'kn' ? 'ಸಲ್ಲಿಸಿ' : 'Execute Audit Submission')}
+               : t('submitAudit')}
            </button>
         </div>
       </div>
